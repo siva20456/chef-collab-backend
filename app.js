@@ -4,6 +4,7 @@ const cors = require('cors')
 const bcrypt = require('bcrypt')
 require('dotenv').config()
 const jwt = require('jsonwebtoken')
+const sgMail = require('@sendgrid/mail')
 const app = express();
 const port = process.env.PORT;
 
@@ -70,7 +71,7 @@ app.post('/register', async (req, res, next) => {
     if (db_user === null && mail_check === null) {
       const hashed_password = await bcrypt.hash(password, 10)
       const feed = await db.collection('Chefs').insertOne({ f_name: fname, l_name: lname, username: name, password: hashed_password, age, mobile, mail: email, location, specialty, exp_salary: 0, experience: 0, prev_salary: 0, rating: 0, relocate: false, gender })
-      const ffed1 = await db.collection('ChefPortfolios').insertOne({ username: name, mail: email, desc: '', isCompleted: false })
+      const ffed1 = await db.collection('ChefPortfolios').insertOne({ username: name, mail: email, desc: '', isCompleted: false, skills: [], mailVerification: false })
       console.log(feed)
       // res.status(200).send(feed)
       const payload = {
@@ -99,7 +100,7 @@ app.post('/register', async (req, res, next) => {
 app.post('/RestRegister', async (req, res, next) => {
   try {
     console.log(req.body)
-    const { restaurantName, email, password, mobile } = req.body
+    const { restaurantName, email, password, mobile, location, style } = req.body
     console.log(restaurantName, email, password)
     const db_user = await db.collection('Restaurants').findOne({ "name": restaurantName })
     const mail_check = await db.collection('Restaurants').findOne({ mail: email })
@@ -107,8 +108,8 @@ app.post('/RestRegister', async (req, res, next) => {
 
     if (db_user === null && mail_check === null) {
       const hashed_password = await bcrypt.hash(password, 10)
-      const feed = await db.collection('Restaurants').insertOne({ name: restaurantName, password: hashed_password, mobile, mail: email })
-      const feed2 = await db.collection('RestPortfolios').insertOne({ name: restaurantName, mail: email, location: '', rating: 0, salaryMargin: 0, req: {}, mailVerification: false, desc: '', isCompleted: false, style: '' })
+      const feed = await db.collection('Restaurants').insertOne({ name: restaurantName, password: hashed_password, mobile, mail: email, location: location, style })
+      const feed2 = await db.collection('RestPortfolios').insertOne({ name: restaurantName, mail: email, location, rating: 0, salaryMargin: 0, req: {}, mailVerification: false, desc: '', isCompleted: false, style })
       console.log(feed)
       // res.status(200).send(feed)
       const payload = {
@@ -261,8 +262,8 @@ app.post('/updateRestPortfolio', authorizeTheUser, async (req, res, next) => {
   try {
     const { data, portfolio } = req.body
     const { mail } = req
-    delete data._id 
-    delete portfolio._id 
+    delete data._id
+    delete portfolio._id
     const feed = await db.collection('Restaurants').updateOne({ mail: mail }, { $set: { ...data } })
     const feed1 = await db.collection('RestPortfolios').updateOne({ mail: mail }, { $set: { ...portfolio } })
     console.log(feed, feed1)
@@ -281,8 +282,8 @@ app.post('/updateChefPortfolio', authorizeTheUser, async (req, res, next) => {
   try {
     const { data, portfolio } = req.body
     const { mail } = req
-    delete data._id 
-    delete portfolio._id 
+    delete data._id
+    delete portfolio._id
     const feed = await db.collection('Chefs').updateOne({ mail: mail }, { $set: { ...data } })
     const feed1 = await db.collection('ChefPortfolios').updateOne({ mail: mail }, { $set: { ...portfolio } })
     console.log(feed, feed1)
@@ -297,6 +298,124 @@ app.post('/updateChefPortfolio', authorizeTheUser, async (req, res, next) => {
   }
 })
 
+
+// Getting Detail Data 
+
+app.post('/chefDetail', async (req, res, next) => {
+  try {
+    const { username } = req.body
+    const user_data = await db.collection('Chefs').findOne({ username })
+    const portfolio = await db.collection('ChefPortfolios').findOne({ username })
+
+    const specialty = user_data.specialty
+    const similarChefs = await db.collection('Chefs').find({ specialty }).toArray()
+
+    res.status(200).send({ user_data, portfolio, similarChefs })
+  } catch (e) {
+    console.log(e)
+    res.status(400)
+  }
+})
+
+app.post('/restDetail', async (req, res, next) => {
+  try {
+    const { name } = req.body
+    const user_data = await db.collection('Restaurants').findOne({ name })
+    const portfolio = await db.collection('RestPortfolios').findOne({ name })
+
+    res.status(200).send({ user_data, portfolio })
+  } catch (e) {
+    console.log(e)
+    res.status(400)
+  }
+})
+
+
+// Mail Verification 
+
+app.post('/verifyMail', async (req, res, next) => {
+  const { mail } = req.body
+  console.log(req.body)
+  sgMail.setApiKey(process.env.SEND_GRID_KEY);
+  const code = Math.ceil(Math.random() * 100000)
+  // console.log(code)
+
+  // setup e-mail data with unicode symbols
+  var mailOptions = {
+    from: process.env.FROM_MAIL, // sender address
+    to: mail, // list of receivers
+    subject: 'OTP for Verification', // Subject line
+    text: `Greetings from FindUrChef, Your one time verification code is ${code}`, // plaintext body
+    html: `<b>Greetings from FindUrChef, Your one time verification code is ${code}</b>` // html body
+  };
+
+  sgMail.send(mailOptions).then(r => {
+    console.log(r)
+    res.send({ otp: String(code) })
+  }).catch(e => console.log(e))
+})
+
+
+// Sending Details 
+
+app.post('/sendChefDetails', async (req, res, next) => {
+  try {
+    const { username, mail } = req.body
+    const user_data = await db.collection('Chefs').findOne({ username })
+    const portfolio = await db.collection('ChefPortfolios').findOne({ username })
+
+    sgMail.setApiKey(process.env.SEND_GRID_KEY);
+
+    // setup e-mail data with unicode symbols
+    var mailOptions = {
+      from: process.env.FROM_MAIL, // sender address
+      to: mail, // list of receivers
+      subject: 'Chef Details From FindUrChef', // Subject line
+      text: `Greetings from FindUrChef, Mail and Mobile Number of Requested Chef - ${user_data.f_name} ${user_data.l_name} are ${user_data.mail} ${user_data.mobile}`, // plaintext body
+      html: `<b>Greetings from FindUrChef, Mail and Mobile Number of Requested Chef - ${user_data.f_name} ${user_data.l_name} are ${user_data.mail}  ${user_data.mobile}</b>` // html body
+    };
+
+    sgMail.send(mailOptions).then(r => {
+      console.log(r)
+      res.send({ data:'Sent' })
+    }).catch(e => console.log(e))
+  } catch (e) {
+    console.log(e)
+    res.status(400) 
+  }
+})
+
+app.post('/addRequest',async(req,res,next) => {
+  try{
+    const {name,mail} = req.body
+    const rest_data = await db.collection('Restaurants').findOne({ name })
+    const portfolio = await db.collection('RestPortfolios').findOne({ name })
+    const user_data = await db.collection('Chefs').findOne({ mail })
+    const user_portfolio = await db.collection('ChefsPortfolio').findOne({ mail })
+    const new_one = {rest_name:rest_data.name,rest_mail:rest_data.mail,rest_location:rest_data.location,rest_style:rest_data.style,chef_name:user_data.username,chef_mail:user_data.mail,chef_location:user_data.location,chef_style:user_data.specialty}
+    const fedd = await db.collection('Requests').insertOne({ ...new_one })
+    if(fedd.acknowledged){
+      res.status(200).send({data:'Added'})
+    }else{
+      res.status(400).send({data:'Please Try Again'})
+    }
+  }catch(e){
+    console.log(e)
+    res.status(400).send({data:'Something Went Wrong... Try Again'})
+  }
+  
+
+})
+
+app.get('/getRequests',async(req,res,next) => {
+  try{
+    const requests = await db.collection('Requests').find().toArray()
+    res.status(200).send({data:requests})
+  }catch(e){
+    console.log(e)
+    res.status(400).send({data:'Something Went Wrong..!'})
+  }
+})
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
