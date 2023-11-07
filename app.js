@@ -109,7 +109,7 @@ app.post('/RestRegister', async (req, res, next) => {
     if (db_user === null && mail_check === null) {
       const hashed_password = await bcrypt.hash(password, 10)
       const feed = await db.collection('Restaurants').insertOne({ name: restaurantName, password: hashed_password, mobile, mail: email, location: location, style })
-      const feed2 = await db.collection('RestPortfolios').insertOne({ name: restaurantName, mail: email, location, rating: 0, salaryMargin: 0, req: {}, mailVerification: false, desc: '', isCompleted: false, style })
+      const feed2 = await db.collection('RestPortfolios').insertOne({ name: restaurantName, mail: email, location, rating: 0, salaryMargin: 0, req: {}, mailVerification: false, desc: '', isCompleted: false, style,avgCust:0 })
       console.log(feed)
       // res.status(200).send(feed)
       const payload = {
@@ -377,43 +377,51 @@ app.post('/sendChefDetails', async (req, res, next) => {
 
     sgMail.send(mailOptions).then(r => {
       console.log(r)
-      res.send({ data:'Sent' })
+      res.send({ data: 'Sent' })
     }).catch(e => console.log(e))
   } catch (e) {
     console.log(e)
-    res.status(400) 
+    res.status(400)
   }
 })
 
-app.post('/addRequest',async(req,res,next) => {
-  try{
-    const {name,mail} = req.body
+app.post('/addRequest', async (req, res, next) => {
+  try {
+    const { name, mail } = req.body
     const rest_data = await db.collection('Restaurants').findOne({ name })
     const portfolio = await db.collection('RestPortfolios').findOne({ name })
     const user_data = await db.collection('Chefs').findOne({ mail })
     const user_portfolio = await db.collection('ChefsPortfolio').findOne({ mail })
-    const new_one = {rest_name:rest_data.name,rest_mail:rest_data.mail,rest_location:rest_data.location,rest_style:rest_data.style,chef_name:user_data.username,chef_mail:user_data.mail,chef_location:user_data.location,chef_style:user_data.specialty}
-    const fedd = await db.collection('Requests').insertOne({ ...new_one })
-    if(fedd.acknowledged){
-      res.status(200).send({data:'Added'})
+    const checking = await db.collection('Requests').find({ rest_name: rest_data.name }).toArray()
+    const senChecking = checking.filter(e => e.chef_name === user_data.username)
+    console.log(senChecking)
+    if (senChecking.length === 0) {
+      const new_one = { rest_name: rest_data.name, rest_mail: rest_data.mail, rest_location: rest_data.location, rest_style: rest_data.style, chef_name: user_data.username, chef_mail: user_data.mail, chef_location: user_data.location, chef_style: user_data.specialty }
+      const fedd = await db.collection('Requests').insertOne({ ...new_one })
+      if (fedd.acknowledged) {
+        res.status(200).send({ data: 'Request Sent..!' })
+      } else {
+        res.status(400).send({ data: 'Please Try Again' })
+      }
     }else{
-      res.status(400).send({data:'Please Try Again'})
+      res.status(200).send({data:'Request already raised..!'})
     }
-  }catch(e){
+
+  } catch (e) {
     console.log(e)
-    res.status(400).send({data:'Something Went Wrong... Try Again'})
+    res.status(400).send({ data: 'Something Went Wrong... Try Again' })
   }
-  
+
 
 })
 
-app.get('/getRequests',async(req,res,next) => {
-  try{
+app.get('/getRequests', async (req, res, next) => {
+  try {
     const requests = await db.collection('Requests').find().toArray()
-    res.status(200).send({data:requests})
-  }catch(e){
+    res.status(200).send({ data: requests })
+  } catch (e) {
     console.log(e)
-    res.status(400).send({data:'Something Went Wrong..!'})
+    res.status(400).send({ data: 'Something Went Wrong..!' })
   }
 })
 
