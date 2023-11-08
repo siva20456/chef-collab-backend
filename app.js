@@ -73,6 +73,20 @@ app.post('/register', async (req, res, next) => {
       const feed = await db.collection('Chefs').insertOne({ f_name: fname, l_name: lname, username: name, password: hashed_password, age, mobile, mail: email, location, specialty, exp_salary: 0, experience: 0, prev_salary: 0, rating: 0, relocate: false, gender })
       const ffed1 = await db.collection('ChefPortfolios').insertOne({ username: name, mail: email, desc: '', isCompleted: false, skills: [], mailVerification: false })
       console.log(feed)
+      sgMail.setApiKey(process.env.SEND_GRID_KEY);
+      var mailOptions = {
+        from: process.env.FROM_MAIL, // sender address
+        to: email, // list of receivers
+        subject: 'Greetings from FindUrChef', // Subject line
+        text: `Hi Chef ,Greetings from FindUrChef Login to your Account and Complete the portfolio for better experience`, // plaintext body
+        html: `<b>Hi Chef, Greetings from FindUrChef Login to your Account and Complete the portfolio for better experience</b>` // html body
+      };
+
+      sgMail.send(mailOptions).then(r => {
+        console.log(r)
+        res.send({ otp: String(code) })
+      }).catch(e => console.log(e))
+        
       // res.status(200).send(feed)
       const payload = {
         mail: email
@@ -109,31 +123,44 @@ app.post('/RestRegister', async (req, res, next) => {
     if (db_user === null && mail_check === null) {
       const hashed_password = await bcrypt.hash(password, 10)
       const feed = await db.collection('Restaurants').insertOne({ name: restaurantName, password: hashed_password, mobile, mail: email, location: location, style })
-      const feed2 = await db.collection('RestPortfolios').insertOne({ name: restaurantName, mail: email, location, rating: 0, salaryMargin: 0, req: {}, mailVerification: false, desc: '', isCompleted: false, style,avgCust:0 })
+      const feed2 = await db.collection('RestPortfolios').insertOne({ name: restaurantName, mail: email, location, rating: 0, salaryMargin: 0, req: {}, mailVerification: false, desc: '', isCompleted: false, style, avgCust: 0 })
       console.log(feed)
-      // res.status(200).send(feed)
-      const payload = {
-        mail: email
+      sgMail.setApiKey(process.env.SEND_GRID_KEY);
+      var mailOptions = {
+        from: process.env.FROM_MAIL, // sender address
+        to: email, // list of receivers
+        subject: 'Greetings from FindUrChef', // Subject line
+        text: `Hi Restauarant , Greetings from FindUrChef Login to your Account and Complete the portfolio for better experience`, // plaintext body
+        html: `<b>Hi Restauarant , Greetings from FindUrChef Login to your Account and Complete the portfolio for better experience</b>` // html body
+      };
+
+      sgMail.send(mailOptions).then(r => {
+        console.log(r)
+        res.send({ otp: String(code) })
+      }).catch(e => console.log(e))
+        // res.status(200).send(feed)
+        const payload = {
+          mail: email
+        }
+        const jwt_token = jwt.sign(payload, `Secret Token`)
+        res.send({ jwt_token })
+        console.log(restaurantName)
+      } else if (db_user !== null) {
+        res.status(400).send({ error: 'Restaurant Name is already in use' })
+      } else if (mail_check !== null) {
+        res.status(400).send({ error: 'Mail is already in use' })
       }
-      const jwt_token = jwt.sign(payload, `Secret Token`)
-      res.send({ jwt_token })
-      console.log(restaurantName)
-    } else if (db_user !== null) {
-      res.status(400).send({ error: 'Restaurant Name is already in use' })
-    } else if (mail_check !== null) {
-      res.status(400).send({ error: 'Mail is already in use' })
+      else {
+        res.status(400).send({ error: 'Try again with different values' })
+      }
+      // console.log(params.details)
+
+
+
+    } catch (e) {
+      console.error(e)
     }
-    else {
-      res.status(400).send({ error: 'Try again with different values' })
-    }
-    // console.log(params.details)
-
-
-
-  } catch (e) {
-    console.error(e)
-  }
-})
+  })
 
 app.post('/login', async (req, res, next) => {
   try {
@@ -403,8 +430,8 @@ app.post('/addRequest', async (req, res, next) => {
       } else {
         res.status(400).send({ data: 'Please Try Again' })
       }
-    }else{
-      res.status(200).send({data:'Request already raised..!'})
+    } else {
+      res.status(200).send({ data: 'Request already raised..!' })
     }
 
   } catch (e) {
