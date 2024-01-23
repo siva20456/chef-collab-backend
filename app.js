@@ -86,7 +86,7 @@ app.post('/register', async (req, res, next) => {
         console.log(r)
         res.send({ otp: String(code) })
       }).catch(e => console.log(e))
-        
+
       // res.status(200).send(feed)
       const payload = {
         mail: email
@@ -138,29 +138,29 @@ app.post('/RestRegister', async (req, res, next) => {
         console.log(r)
         res.send({ otp: String(code) })
       }).catch(e => console.log(e))
-        // res.status(200).send(feed)
-        const payload = {
-          mail: email
-        }
-        const jwt_token = jwt.sign(payload, `Secret Token`)
-        res.send({ jwt_token })
-        console.log(restaurantName)
-      } else if (db_user !== null) {
-        res.status(400).send({ error: 'Restaurant Name is already in use' })
-      } else if (mail_check !== null) {
-        res.status(400).send({ error: 'Mail is already in use' })
+      // res.status(200).send(feed)
+      const payload = {
+        mail: email
       }
-      else {
-        res.status(400).send({ error: 'Try again with different values' })
-      }
-      // console.log(params.details)
-
-
-
-    } catch (e) {
-      console.error(e)
+      const jwt_token = jwt.sign(payload, `Secret Token`)
+      res.send({ jwt_token })
+      console.log(restaurantName)
+    } else if (db_user !== null) {
+      res.status(400).send({ error: 'Restaurant Name is already in use' })
+    } else if (mail_check !== null) {
+      res.status(400).send({ error: 'Mail is already in use' })
     }
-  })
+    else {
+      res.status(400).send({ error: 'Try again with different values' })
+    }
+    // console.log(params.details)
+
+
+
+  } catch (e) {
+    console.error(e)
+  }
+})
 
 app.post('/login', async (req, res, next) => {
   try {
