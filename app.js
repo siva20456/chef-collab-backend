@@ -19,7 +19,7 @@ app.use(express.json())
 
 console.log(process.env.URL)
 // Create a new MongoClient
-const client = new MongoClient(process.env.URL, {
+const client = new MongoClient(process.env.M_URL, {
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
