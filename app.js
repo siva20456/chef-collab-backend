@@ -47,12 +47,12 @@ const db = client.db('ChefCollab');
 //     next(err);
 //   });
 // });
-// app.use(function(req, res, next) {
-//   res.header("Access-Control-Allow-Origin","http://localhost:3004");
-//   res.header('Access-Control-Allow-Methods', 'GET, POST, UPDATE, DELETE, OPTIONS');
-//   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept , Authorization");
-//   next()
-// });
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin","http://localhost:3004");
+  res.header('Access-Control-Allow-Methods', 'GET, POST, UPDATE, DELETE, OPTIONS');
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept , Authorization");
+  next()
+});
 
 // DataBase Connection Ends 
 
@@ -459,4 +459,4 @@ app.listen(port, () => {
 
 module.exports = client
 
-export default app
+module.exports = app
