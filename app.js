@@ -458,3 +458,5 @@ app.listen(port, () => {
 
 
 module.exports = client
+
+export default app
