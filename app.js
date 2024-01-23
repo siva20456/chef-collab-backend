@@ -452,6 +452,10 @@ app.get('/getRequests', async (req, res, next) => {
   }
 })
 
+app.get('/getRequests', async (req, res, next) => {
+  res.send({data:'Hi'})
+})
+
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
